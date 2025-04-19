@@ -5,8 +5,16 @@ export interface TextItem {
   updatedAt: string;
   language: "spanish" | "korean";
   text: string;
-  status: "텍스트만" | "TTS 처리 중" | "TTS 완료";
+  status:
+    | "텍스트만"
+    | "TTS 처리 중"
+    | "TTS 완료"
+    | "음성 변환 완료"
+    | "TTS 변환 실패"
+    | "오디오 생성됨";
   audioUrl: string | null;
+  audioFile?: string | null;
+  audioPath?: string | null;
   examType?: "스널트" | "플렉스" | "오픽" | null;
   level?: "초급" | "중급" | "실전" | null;
 }
@@ -91,7 +99,7 @@ export async function addText(
 export async function updateTextStatus(
   id: number,
   status: TextItem["status"],
-  audioUrl?: string | null
+  audioPath?: string | null
 ): Promise<TextItem | null> {
   try {
     console.log(`텍스트 ID ${id} 상태 업데이트 시도 중...`);
@@ -109,7 +117,10 @@ export async function updateTextStatus(
       ...currentData,
       status,
       updatedAt: new Date().toISOString(),
-      ...(audioUrl !== undefined && { audioUrl }),
+      ...(audioPath !== undefined && {
+        audioPath,
+        audioUrl: `file://${audioPath}/output_1.mp3`,
+      }),
     };
     console.log("업데이트할 데이터:", updateData);
 
