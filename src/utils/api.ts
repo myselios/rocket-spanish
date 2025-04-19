@@ -1,28 +1,9 @@
-// 텍스트 데이터 타입 정의
-export interface TextItem {
-  id: number;
-  createdAt: string;
-  updatedAt: string;
-  language: "spanish" | "korean";
-  text: string;
-  status:
-    | "텍스트만"
-    | "TTS 처리 중"
-    | "TTS 완료"
-    | "음성 변환 완료"
-    | "TTS 변환 실패"
-    | "오디오 생성됨";
-  audioUrl: string | null;
-  audioFile?: string | null;
-  audioPath?: string | null;
-  examType?: "스널트" | "플렉스" | "오픽" | null;
-  level?: "초급" | "중급" | "실전" | null;
-}
+import { TextItem, TextStatus, API_BASE_URL } from "@/types";
 
-// API URL - json-server가 실행되는 포트
-const API_URL = "http://localhost:3002";
+// API URL
+const API_URL = API_BASE_URL;
 
-// 모든 텍스트 목록 가져오기
+// 모든 텍스트 목록 가져오기 (외부 JSON 서버)
 export async function getAllTexts(): Promise<TextItem[]> {
   try {
     console.log("텍스트 목록 가져오기 시도 중...");
@@ -41,8 +22,8 @@ export async function getAllTexts(): Promise<TextItem[]> {
   }
 }
 
-// 새 텍스트 추가하기
-export async function addText(
+// 새 텍스트 추가하기 (외부 JSON 서버)
+export async function addTextToServer(
   textData: Omit<TextItem, "id">
 ): Promise<TextItem | null> {
   try {
@@ -95,10 +76,10 @@ export async function addText(
   }
 }
 
-// 텍스트 상태 업데이트하기
+// 텍스트 상태 업데이트하기 (외부 JSON 서버)
 export async function updateTextStatus(
   id: number,
-  status: TextItem["status"],
+  status: TextStatus,
   audioPath?: string | null
 ): Promise<TextItem | null> {
   try {
@@ -146,8 +127,8 @@ export async function updateTextStatus(
   }
 }
 
-// 텍스트 삭제하기
-export async function deleteText(id: number): Promise<boolean> {
+// 텍스트 삭제하기 (외부 JSON 서버)
+export async function deleteTextFromServer(id: number): Promise<boolean> {
   try {
     console.log(`텍스트 ID ${id} 삭제 시도 중...`);
     const response = await fetch(`${API_URL}/texts/${id}`, {
@@ -159,5 +140,129 @@ export async function deleteText(id: number): Promise<boolean> {
   } catch (error) {
     console.error("API 오류:", error);
     return false;
+  }
+}
+
+// 텍스트 목록을 가져오는 함수 (내부 API 라우트)
+export async function fetchTextsFromApi(): Promise<TextItem[]> {
+  try {
+    const response = await fetch("/api/files");
+    if (!response.ok) {
+      throw new Error(`API 오류: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.texts || [];
+  } catch (error) {
+    console.error("텍스트 가져오기 오류:", error);
+    throw error;
+  }
+}
+
+// 단일 텍스트를 가져오는 함수 (내부 API 라우트)
+export async function fetchTextFromApi(id: number): Promise<TextItem | null> {
+  try {
+    const response = await fetch(`/api/files/${id}`);
+    if (!response.ok) {
+      throw new Error(`API 오류: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.text || null;
+  } catch (error) {
+    console.error(`텍스트 ID ${id} 가져오기 오류:`, error);
+    throw error;
+  }
+}
+
+// 텍스트 추가 함수 (내부 API 라우트)
+export async function addTextToApi(
+  text: Omit<TextItem, "id">
+): Promise<TextItem> {
+  try {
+    const response = await fetch("/api/files", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        content: text.text,
+        language: text.language,
+        level: text.level,
+        examType: text.examType,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API 오류: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.text;
+  } catch (error) {
+    console.error("텍스트 추가 오류:", error);
+    throw error;
+  }
+}
+
+// 텍스트를 음성으로 변환하는 함수
+export async function convertTextToSpeech(textId: number) {
+  try {
+    const response = await fetch("/api/tts", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text_id: textId }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API 오류: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("TTS 변환 오류:", error);
+    throw error;
+  }
+}
+
+// 텍스트 삭제 함수 (내부 API 라우트)
+export async function deleteTextFromApi(id: number): Promise<void> {
+  try {
+    const response = await fetch(`/api/files/${id}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      throw new Error(`API 오류: ${response.status}`);
+    }
+  } catch (error) {
+    console.error(`텍스트 ID ${id} 삭제 오류:`, error);
+    throw error;
+  }
+}
+
+// 텍스트 업데이트 함수 (내부 API 라우트)
+export async function updateTextInApi(
+  id: number,
+  text: Partial<TextItem>
+): Promise<TextItem> {
+  try {
+    const response = await fetch(`/api/files/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(text),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API 오류: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.text || data;
+  } catch (error) {
+    console.error(`텍스트 ID ${id} 업데이트 오류:`, error);
+    throw error;
   }
 }

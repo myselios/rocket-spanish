@@ -10,6 +10,10 @@ services:
     restart: always
     volumes:
       - ./public:/app/public
+      - ./data:/app/data
+      - ./db.json:/app/db.json
+    depends_on:
+      - json-server
     healthcheck:
       test:
         [
@@ -29,8 +33,12 @@ services:
     image: node:18-alpine
     working_dir: /app
     volumes:
-      - ./:/app
+      - ./db.json:/app/db.json
     command: sh -c "npm install -g json-server && json-server --watch db.json --port 3002 --host 0.0.0.0"
     ports:
       - "3002:3002"
     restart: always
+
+volumes:
+  data:
+    driver: local

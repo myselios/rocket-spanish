@@ -1,0 +1,7 @@
+처리 시간: 2025-04-19 23:53:33
+처리된 문장 수: 1/1
+사용된 언어: spanish
+사용된 음성 ID: moss_audio_800686e0-1cf0-11f0-8444-ae62a3be7263
+
+--- 처리된 문장 목록 ---
+1. [성공] Me quedé dormido viendo la película.

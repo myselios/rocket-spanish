@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { getAllTexts, updateTextStatus, deleteText } from "@/utils/api";
+import {
+  getAllTexts,
+  updateTextStatus,
+  deleteTextFromServer,
+} from "@/utils/api";
 import Link from "next/link";
 import { IconButton, Tooltip, useToast } from "@chakra-ui/react";
 import { FiMusic, FiDownload, FiTrash2 } from "react-icons/fi";
@@ -126,16 +130,25 @@ export default function Files() {
   const handleDelete = async (id: number) => {
     if (window.confirm("정말 이 텍스트를 삭제하시겠습니까?")) {
       try {
-        const success = await deleteText(id);
-        if (success) {
-          // 텍스트를 삭제할 때 관련 파일도 함께 삭제
-          setTexts(texts.filter((text) => text.id !== id));
-        } else {
-          alert("텍스트 삭제에 실패했습니다.");
-        }
+        await deleteTextFromServer(id);
+        // 텍스트를 삭제할 때 관련 파일도 함께 삭제
+        setTexts(texts.filter((text) => text.id !== id));
+        toast({
+          title: "텍스트 삭제 완료",
+          description: "텍스트가 성공적으로 삭제되었습니다.",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
       } catch (err) {
         console.error("삭제 중 오류:", err);
-        alert("텍스트 삭제 중 오류가 발생했습니다.");
+        toast({
+          title: "텍스트 삭제 실패",
+          description: "텍스트 삭제 중 오류가 발생했습니다.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
       }
     }
   };
@@ -154,7 +167,7 @@ export default function Files() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ id: textId }),
+        body: JSON.stringify({ text_id: textId }),
       });
 
       if (!response.ok) {

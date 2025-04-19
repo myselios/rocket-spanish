@@ -116,3 +116,60 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+# Rocket 프로젝트
+
+## Docker로 실행하기
+
+### 사전 요구사항
+
+- Docker
+- Docker Compose
+
+### 빌드 및 실행
+
+```bash
+# 이미지 빌드 및 컨테이너 실행
+docker-compose up -d --build
+
+# 로그 확인
+docker-compose logs -f
+```
+
+### 중요 경로
+
+- 웹 애플리케이션: http://localhost:3000
+- JSON 서버: http://localhost:3002
+
+### 데이터 디렉토리
+
+- TTS 입력 파일: `./data/tts/input`
+- TTS 출력 파일: `./data/tts/output`
+
+### 컨테이너 종료
+
+```bash
+docker-compose down
+```
+
+## 로컬에서 개발 환경으로 실행하기
+
+### 사전 요구사항
+
+- Node.js (v18 이상)
+- npm
+
+### 설치 및 실행
+
+```bash
+# 패키지 설치
+npm install
+
+# 개발 서버 실행 (Next.js + JSON 서버)
+npm run dev
+```
+
+### 중요 경로
+
+- 개발 서버: http://localhost:3000
+- JSON 서버: http://localhost:3002
