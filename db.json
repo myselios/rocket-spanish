@@ -1,0 +1,42 @@
+{
+  "texts": [
+    {
+      "id": 2,
+      "createdAt": "2024-04-19T09:15:00Z",
+      "updatedAt": "2024-04-19T09:20:00Z",
+      "language": "korean",
+      "text": "안녕하세요? 저는 한국에서 왔습니다. 만나서 반갑습니다.",
+      "status": "TTS 완료",
+      "audioUrl": "/audios/sample-korean.mp3"
+    },
+    {
+      "createdAt": "2025-04-19T01:24:13.498Z",
+      "updatedAt": "2025-04-19T01:24:34.378Z",
+      "language": "korean",
+      "text": "안뇽",
+      "status": "TTS 완료",
+      "audioUrl": "/audios/generated-3.mp3",
+      "id": 3
+    },
+    {
+      "createdAt": "2025-04-19T01:25:07.512Z",
+      "updatedAt": "2025-04-19T01:36:19.579Z",
+      "language": "korean",
+      "text": "안녕하세요.\n만나서 반갑습니다.\n나는 박동건입니다.",
+      "status": "TTS 완료",
+      "audioUrl": "/audios/1745026545514598874-259988229496969.mp3",
+      "id": 4
+    },
+    {
+      "createdAt": "2025-04-19T01:43:36.387Z",
+      "updatedAt": "2025-04-19T01:46:24.854Z",
+      "language": "korean",
+      "text": "반가워요  ",
+      "status": "TTS 완료",
+      "audioUrl": "/audios/1745026545514598874-259988229496969.mp3",
+      "examType": "스널트",
+      "level": "초급",
+      "id": 5
+    }
+  ]
+}

@@ -1,312 +1,299 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 
-export default function FileUpload() {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+export default function UploadPage() {
+  const router = useRouter();
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [language, setLanguage] = useState("spanish");
+  const [level, setLevel] = useState("");
+  const [examType, setExamType] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadStatus, setUploadStatus] = useState<
-    "idle" | "success" | "error"
-  >("idle");
-  const [spanishText, setSpanishText] = useState("");
-  const [koreanText, setKoreanText] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      setSelectedFile(file);
-      // 실제로는 여기서 파일 내용을 읽어 텍스트 필드를 자동으로 채울 수 있습니다
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      setSelectedFile(file);
-      // 실제로는 여기서 파일 내용을 읽어 텍스트 필드를 자동으로 채울 수 있습니다
-    }
-  };
-
-  const simulateUpload = () => {
     setIsUploading(true);
-    setUploadProgress(0);
 
+    // 진행 상태를 위한 타이머 설정 (실제로는 업로드 진행에 따라 처리해야 함)
     const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
+      setUploadProgress((prevProgress) => {
+        if (prevProgress >= 100) {
           clearInterval(interval);
-          setIsUploading(false);
-          setUploadStatus("success");
           return 100;
         }
-        return prev + 10;
+        return prevProgress + 10;
       });
     }, 300);
+
+    // 실제 업로드 로직을 여기에 구현 (현재는 타이머로 시뮬레이션만 함)
+    setTimeout(() => {
+      clearInterval(interval);
+      setUploadProgress(100);
+      setIsUploading(false);
+      router.push("/files");
+    }, 3000);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!selectedFile && !spanishText) {
-      alert("파일을 선택하거나 스페인어 텍스트를 입력해 주세요");
-      return;
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
     }
-
-    simulateUpload();
-
-    // 실제 구현에서는 API 호출을 통해 파일과 텍스트를 서버에 업로드합니다
   };
 
   const handleReset = () => {
-    setSelectedFile(null);
-    setSpanishText("");
-    setKoreanText("");
-    setUploadStatus("idle");
-    setUploadProgress(0);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    setTitle("");
+    setContent("");
+    setLanguage("spanish");
+    setLevel("");
+    setExamType("");
+    setFile(null);
+    router.push("/files");
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold mb-2">파일 업로드</h1>
-        <p className="thread-text-secondary">
-          스페인어 파일을 업로드하여 번역을 시작하세요
-        </p>
-      </div>
+    <div className="flex flex-col min-h-screen bg-gray-50 p-6">
+      <main className="flex-grow">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-8">
+            <h1 className="text-2xl font-bold mb-6 text-gray-800">
+              텍스트 및 음성 파일 업로드
+            </h1>
 
-      <div className="bg-white dark:bg-black border thread-border rounded-lg overflow-hidden">
-        <form onSubmit={handleSubmit} className="p-5">
-          {/* 파일 드래그 앤 드롭 영역 */}
-          <div
-            className="mb-6 border-2 border-dashed thread-border rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 transition-all duration-200"
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <svg
-              className="mx-auto h-12 w-12 thread-text-secondary"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-              />
-            </svg>
-            <p className="mt-4 text-base">
-              파일을 끌어다 놓거나{" "}
-              <span className="font-medium">클릭하여 선택하세요</span>
-            </p>
-            <p className="mt-1 text-sm thread-text-secondary">
-              MP3, MP4, WAV 파일 (최대 50MB)
-            </p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              accept=".mp3,.mp4,.wav"
-              onChange={handleFileChange}
-            />
-          </div>
-
-          {selectedFile && (
-            <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border thread-border">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <svg
-                    className="h-6 w-6 thread-text-secondary mr-3"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                    />
-                  </svg>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* 왼쪽 컬럼 */}
+                <div className="space-y-6">
                   <div>
-                    <p className="text-base font-medium">{selectedFile.name}</p>
-                    <p className="text-sm thread-text-secondary">
-                      {Math.round(selectedFile.size / 1024)} KB
-                    </p>
+                    <label
+                      htmlFor="title"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      제목
+                    </label>
+                    <input
+                      type="text"
+                      id="title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      className="w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="문서 제목을 입력하세요"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="content"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      내용
+                    </label>
+                    <textarea
+                      id="content"
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      rows={8}
+                      className="w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="문서 내용을 입력하세요"
+                      required
+                    ></textarea>
                   </div>
                 </div>
+
+                {/* 오른쪽 컬럼 */}
+                <div className="space-y-6">
+                  <div>
+                    <label
+                      htmlFor="language"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      언어
+                    </label>
+                    <select
+                      id="language"
+                      value={language}
+                      onChange={(e) => setLanguage(e.target.value)}
+                      className="w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    >
+                      <option value="spanish">스페인어</option>
+                      <option value="korean">한국어</option>
+                      <option value="english">영어</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="examType"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      시험 유형
+                    </label>
+                    <select
+                      id="examType"
+                      value={examType}
+                      onChange={(e) => setExamType(e.target.value)}
+                      className="w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    >
+                      <option value="" disabled>
+                        시험 유형을 선택하세요
+                      </option>
+                      <option value="snult">스널트</option>
+                      <option value="flex">플렉스</option>
+                      <option value="opic">오픽</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="level"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      레벨
+                    </label>
+                    <select
+                      id="level"
+                      value={level}
+                      onChange={(e) => setLevel(e.target.value)}
+                      className="w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    >
+                      <option value="" disabled>
+                        레벨을 선택하세요
+                      </option>
+                      <option value="beginner">입문 (A1)</option>
+                      <option value="basic">기초 (A2)</option>
+                      <option value="intermediate">중급 (B1)</option>
+                      <option value="advanced">고급 (B2)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="audioFile"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      오디오 파일 (선택사항)
+                    </label>
+                    <div className="flex items-center justify-center w-full">
+                      <label
+                        htmlFor="audioFile"
+                        className="flex flex-col items-center justify-center w-full h-24 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors duration-200"
+                      >
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <svg
+                            className="w-8 h-8 mb-1 text-gray-500"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                            ></path>
+                          </svg>
+                          <p className="text-xs text-gray-500">
+                            {file
+                              ? file.name
+                              : "파일을 업로드하거나 드래그앤드롭 하세요"}
+                          </p>
+                        </div>
+                        <input
+                          id="audioFile"
+                          type="file"
+                          accept="audio/*"
+                          className="hidden"
+                          onChange={handleFileChange}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {isUploading && (
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div
+                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
+              )}
+
+              <div className="flex justify-end space-x-4">
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedFile(null);
-                    if (fileInputRef.current) fileInputRef.current.value = "";
-                  }}
-                  className="thread-text-secondary hover:opacity-70 transition-opacity"
+                  onClick={handleReset}
+                  className="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 hover:shadow-md transition-shadow focus:outline-none"
                 >
-                  <svg
-                    className="h-5 w-5"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUploading}
+                  className={`px-4 py-2 bg-blue-600 rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 hover:shadow-md transition-shadow focus:outline-none ${
+                    isUploading ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                >
+                  {isUploading ? "업로드 중..." : "업로드"}
                 </button>
               </div>
-            </div>
-          )}
-
-          {/* 텍스트 입력 필드 그룹 */}
-          <div className="mb-6 space-y-5">
-            <div className="relative">
-              <label
-                className="block text-base font-medium mb-2"
-                htmlFor="spanish-text"
-              >
-                스페인어 텍스트
-              </label>
-              <textarea
-                id="spanish-text"
-                rows={3}
-                className="w-full px-4 py-3 border thread-border rounded-lg focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white bg-transparent"
-                placeholder="스페인어 문장을 입력하세요..."
-                value={spanishText}
-                onChange={(e) => setSpanishText(e.target.value)}
-              />
-            </div>
-
-            <div className="relative">
-              <label
-                className="flex items-center text-base font-medium mb-2"
-                htmlFor="korean-text"
-              >
-                한국어 텍스트{" "}
-                <span className="ml-2 text-sm thread-text-secondary">
-                  (선택사항)
-                </span>
-              </label>
-              <textarea
-                id="korean-text"
-                rows={3}
-                className="w-full px-4 py-3 border thread-border rounded-lg focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white bg-transparent"
-                placeholder="한국어 번역을 입력하세요..."
-                value={koreanText}
-                onChange={(e) => setKoreanText(e.target.value)}
-              />
-            </div>
+            </form>
           </div>
 
-          {/* 진행 상태 표시 */}
-          {isUploading && (
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-base font-medium">업로드 진행 중...</span>
-                <span className="text-base font-medium">{uploadProgress}%</span>
+          <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+            <h2 className="text-xl font-bold mb-4 text-gray-800">
+              업로드 가이드
+            </h2>
+            <div className="space-y-4 text-gray-600">
+              <div className="flex items-start">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3 shadow-inner">
+                  <span className="text-blue-600 font-medium">1</span>
+                </div>
+                <p>
+                  <span className="font-medium">문서 제목과 내용</span>을
+                  입력하세요. 내용에는 학습할 텍스트를 입력합니다.
+                </p>
               </div>
-              <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-black dark:bg-white h-2 rounded-full transition-all duration-300 ease-in-out"
-                  style={{ width: `${uploadProgress}%` }}
-                ></div>
+              <div className="flex items-start">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3 shadow-inner">
+                  <span className="text-blue-600 font-medium">2</span>
+                </div>
+                <p>
+                  <span className="font-medium">언어, 시험 유형, 레벨</span>을
+                  선택하여 문서를 분류합니다.
+                </p>
               </div>
-            </div>
-          )}
-
-          {/* 상태 메시지 */}
-          {uploadStatus === "success" && (
-            <div className="mb-6 p-4 bg-green-50 dark:bg-green-900 border border-green-200 dark:border-green-800 rounded-lg">
-              <div className="flex items-center">
-                <svg
-                  className="h-5 w-5 text-green-500 dark:text-green-400 mr-3"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                <span className="text-base text-green-700 dark:text-green-300">
-                  파일이 성공적으로 업로드되었습니다!
-                </span>
+              <div className="flex items-start">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3 shadow-inner">
+                  <span className="text-blue-600 font-medium">3</span>
+                </div>
+                <p>
+                  필요한 경우 <span className="font-medium">오디오 파일</span>을
+                  첨부할 수 있습니다. (MP3, WAV 형식 지원)
+                </p>
               </div>
-            </div>
-          )}
-
-          {uploadStatus === "error" && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-800 rounded-lg">
-              <div className="flex items-center">
-                <svg
-                  className="h-5 w-5 text-red-500 dark:text-red-400 mr-3"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-                <span className="text-base text-red-700 dark:text-red-300">
-                  업로드 중 오류가 발생했습니다. 다시 시도해 주세요.
-                </span>
+              <div className="flex items-start">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3 shadow-inner">
+                  <span className="text-blue-600 font-medium">4</span>
+                </div>
+                <p>
+                  모든 정보를 입력한 후{" "}
+                  <span className="font-medium">업로드 버튼</span>을 클릭하세요.
+                </p>
               </div>
             </div>
-          )}
-
-          {/* 버튼 영역 */}
-          <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={handleReset}
-              className="px-4 py-2 border thread-border rounded-full font-medium thread-hover transition-all duration-200"
-            >
-              초기화
-            </button>
-            <button
-              type="submit"
-              disabled={isUploading}
-              className={`px-4 py-2 rounded-full font-medium transition-all duration-200 ${
-                isUploading
-                  ? "bg-gray-200 dark:bg-gray-700 cursor-not-allowed"
-                  : "bg-black text-white dark:bg-white dark:text-black hover:opacity-90"
-              }`}
-            >
-              {isUploading ? "업로드 중..." : "업로드"}
-            </button>
           </div>
-        </form>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
