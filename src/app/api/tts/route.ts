@@ -6,16 +6,11 @@ import {
 } from "@/utils/supabaseApi";
 import { put } from "@vercel/blob";
 import { readFile } from "fs/promises";
-import path from "path";
 
 export async function POST(request: NextRequest): Promise<Response> {
   console.log("========== TTS API 요청 시작 ==========");
 
   try {
-    // 프로젝트 루트 경로 설정
-    const projectRoot = process.cwd();
-    console.log(`프로젝트 루트 경로: ${projectRoot}`);
-
     // 요청 본문에서 text_id 파싱
     let body;
     try {
@@ -96,33 +91,42 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     // Vercel Blob Storage에 파일 업로드
     try {
-      const mp3FilePath = path.join(projectRoot, outputDir, "output_1.mp3");
+      if (mp3Files.length === 0) {
+        throw new Error("생성된 MP3 파일이 없습니다");
+      }
+
+      const mp3FilePath = mp3Files[0]; // 첫 번째 MP3 파일 사용
       console.log(`MP3 파일 경로: ${mp3FilePath}`);
 
       // 파일 내용을 버퍼로 읽기
-      const fileBuffer = await readFile(mp3FilePath);
+      try {
+        const fileBuffer = await readFile(mp3FilePath);
 
-      // Vercel Blob Storage에 업로드
-      const blob = await put(`tts_${text_id}_${Date.now()}.mp3`, fileBuffer, {
-        access: "public",
-      });
+        // Vercel Blob Storage에 업로드
+        const blob = await put(`tts_${text_id}_${Date.now()}.mp3`, fileBuffer, {
+          access: "public",
+        });
 
-      console.log(`Blob Storage에 업로드 완료: ${blob.url}`);
+        console.log(`Blob Storage에 업로드 완료: ${blob.url}`);
 
-      // Supabase에서 텍스트 상태 업데이트
-      await updateTextStatusInSupabase(text_id, "TTS 완료", blob.url);
+        // Supabase에서 텍스트 상태 업데이트
+        await updateTextStatusInSupabase(text_id, "TTS 완료", blob.url);
 
-      console.log(`텍스트 상태 업데이트 완료: ${text_id}`);
+        console.log(`텍스트 상태 업데이트 완료: ${text_id}`);
 
-      console.log("========== TTS API 요청 완료 ==========");
+        console.log("========== TTS API 요청 완료 ==========");
 
-      // 응답 반환
-      return NextResponse.json({
-        success: true,
-        text_id,
-        audioUrl: blob.url,
-        mp3Files,
-      });
+        // 응답 반환
+        return NextResponse.json({
+          success: true,
+          text_id,
+          audioUrl: blob.url,
+          mp3Files: [mp3FilePath],
+        });
+      } catch (readError) {
+        console.error(`파일 읽기 오류: ${mp3FilePath}`, readError);
+        throw new Error(`MP3 파일을 읽을 수 없습니다: ${mp3FilePath}`);
+      }
     } catch (uploadError) {
       console.error(`파일 업로드 또는 DB 업데이트 오류:`, uploadError);
       return NextResponse.json(

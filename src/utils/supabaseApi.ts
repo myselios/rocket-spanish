@@ -175,12 +175,20 @@ export async function deleteTextFromSupabase(id: number): Promise<void> {
  */
 export async function updateTextStatusInSupabase(
   id: number,
-  status: TextStatus
+  status: TextStatus,
+  audioUrl?: string
 ): Promise<void> {
   try {
+    const updateData: { status: TextStatus; audio_url?: string } = { status };
+
+    // audioUrl이 제공된 경우 업데이트 데이터에 추가
+    if (audioUrl) {
+      updateData.audio_url = audioUrl;
+    }
+
     const { error } = await supabase
       .from(TEXTS_TABLE)
-      .update({ status })
+      .update(updateData)
       .eq("id", id);
 
     if (error) {
