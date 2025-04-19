@@ -1,94 +1,111 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fetchTextFromSupabase } from "@/utils/supabaseApi";
+import fs from "fs";
 import path from "path";
-import fs from "fs/promises";
-
-interface TextItem {
-  id: number;
-  text: string;
-  status: string;
-  audioPath?: string;
-  language: string;
-  updatedAt: string;
-}
-
-// 루트 디렉토리의 db.json 사용
-const DB_PATH = path.join(process.cwd(), "db.json");
-
-// ID로 텍스트 항목 가져오기
-async function getTextById(id: string): Promise<TextItem | null> {
-  try {
-    const data = await fs.readFile(DB_PATH, "utf8");
-    const { texts } = JSON.parse(data);
-    const text = texts.find((item: TextItem) => item.id === parseInt(id));
-    return text || null;
-  } catch (error) {
-    console.error("Error fetching text:", error);
-    return null;
-  }
-}
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ): Promise<Response> {
-  try {
-    const { id } = await params;
-    console.log(`Download request for ID: ${id}`);
+  console.log(`다운로드 API 요청 받음: ID ${params.id}`);
 
-    const text = await getTextById(id);
-    if (!text) {
-      return NextResponse.json({ error: "Text not found" }, { status: 404 });
+  try {
+    // ID를 숫자로 변환
+    const id = parseInt(params.id, 10);
+
+    if (isNaN(id)) {
+      console.error(`유효하지 않은 ID 형식: ${params.id}`);
+      return NextResponse.json(
+        { error: "유효하지 않은 ID 형식입니다" },
+        { status: 400 }
+      );
     }
 
-    if (!text.audioPath) {
+    // Supabase에서 텍스트 항목 가져오기
+    const textItem = await fetchTextFromSupabase(id);
+
+    if (!textItem) {
+      console.error(`텍스트 항목을 찾을 수 없음: ID ${id}`);
       return NextResponse.json(
-        { error: "Audio not available" },
+        { error: "텍스트 항목을 찾을 수 없습니다" },
         { status: 404 }
       );
     }
 
-    // 상대 경로를 확인하고 사용
-    const audioPath = text.audioPath.startsWith("/")
-      ? text.audioPath.substring(1)
-      : text.audioPath;
-
-    // 프로젝트 루트 기준 절대 경로 구성
-    const absoluteAudioPath = path.join(process.cwd(), audioPath);
-    console.log(`File path: ${absoluteAudioPath}`);
-
-    try {
-      const fileExists = await fs
-        .stat(absoluteAudioPath)
-        .then(() => true)
-        .catch(() => false);
-
-      if (!fileExists) {
-        console.error(`File not found at: ${absoluteAudioPath}`);
-        return NextResponse.json({ error: "File not found" }, { status: 404 });
-      }
-
-      const fileData = await fs.readFile(absoluteAudioPath);
-      const fileName = path.basename(absoluteAudioPath);
-
-      // MP3 파일 반환
-      return new NextResponse(fileData, {
-        status: 200,
-        headers: {
-          "Content-Type": "audio/mpeg",
-          "Content-Disposition": `attachment; filename="${fileName}"`,
-        },
-      });
-    } catch (error) {
-      console.error("Error reading file:", error);
+    // 오디오 URL 확인
+    if (!textItem.audioUrl) {
+      console.error(`오디오 URL이 없음: ID ${id}`);
       return NextResponse.json(
-        { error: "Error reading audio file" },
-        { status: 500 }
+        { error: "이 텍스트에 대한 오디오 파일이 없습니다" },
+        { status: 404 }
+      );
+    }
+
+    console.log(`오디오 URL: ${textItem.audioUrl}`);
+
+    // URL이 'https://'로 시작하는지 확인 (Vercel Blob Storage)
+    if (textItem.audioUrl.startsWith("https://")) {
+      // 오디오 파일 다운로드
+      try {
+        console.log(`원격 오디오 파일 다운로드 중: ${textItem.audioUrl}`);
+
+        // 리디렉션 응답 반환
+        return NextResponse.redirect(textItem.audioUrl);
+      } catch (downloadError) {
+        console.error(`오디오 파일 다운로드 오류:`, downloadError);
+        return NextResponse.json(
+          { error: "오디오 파일 다운로드 중 오류가 발생했습니다" },
+          { status: 500 }
+        );
+      }
+    }
+    // 로컬 파일 경로인 경우
+    else if (textItem.audioPath) {
+      try {
+        const filePath = path.join(process.cwd(), textItem.audioPath);
+        console.log(`로컬 오디오 파일 경로: ${filePath}`);
+
+        if (!fs.existsSync(filePath)) {
+          console.error(`파일을 찾을 수 없음: ${filePath}`);
+          return NextResponse.json(
+            { error: "오디오 파일을 찾을 수 없습니다" },
+            { status: 404 }
+          );
+        }
+
+        // 파일을 스트림으로 읽어 응답으로 반환
+        const fileBuffer = fs.readFileSync(filePath);
+        const headers = new Headers();
+        headers.set("Content-Type", "audio/mpeg");
+        headers.set(
+          "Content-Disposition",
+          `attachment; filename="audio_${id}.mp3"`
+        );
+
+        return new Response(fileBuffer, {
+          headers,
+        });
+      } catch (fileError) {
+        console.error(`로컬 파일 처리 오류:`, fileError);
+        return NextResponse.json(
+          { error: "오디오 파일 처리 중 오류가 발생했습니다" },
+          { status: 500 }
+        );
+      }
+    } else {
+      console.error(`유효한 오디오 URL 또는 경로가 없음: ID ${id}`);
+      return NextResponse.json(
+        { error: "유효한 오디오 URL 또는 경로가 없습니다" },
+        { status: 404 }
       );
     }
   } catch (error) {
-    console.error("Error in download handler:", error);
+    console.error(`다운로드 처리 중 오류:`, error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      {
+        error: "다운로드 처리 중 오류가 발생했습니다",
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }

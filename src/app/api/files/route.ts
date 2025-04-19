@@ -1,64 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
 import { TextItem } from "@/types";
-
-// 파일 데이터 목록 인터페이스
-interface DbData {
-  texts: TextItem[];
-}
-
-// 데이터 디렉토리 경로 - 도커 및 로컬 환경 모두에서 일관되게 루트 디렉토리 사용
-const DATA_DIR = process.cwd();
-const DB_DATA_PATH = path.join(DATA_DIR, "db.json");
-
-// 데이터 디렉토리가 존재하는지 확인하고 없으면 생성
-function ensureDataDirectoryExists() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-}
-
-// 데이터베이스 데이터 가져오기
-function getDbData(): DbData {
-  ensureDataDirectoryExists();
-
-  if (!fs.existsSync(DB_DATA_PATH)) {
-    console.error(`DB_DATA_PATH가 존재하지 않습니다: ${DB_DATA_PATH}`);
-    return { texts: [] };
-  }
-
-  try {
-    const data = fs.readFileSync(DB_DATA_PATH, "utf8");
-    console.log(`db.json 파일 읽기 성공: ${DB_DATA_PATH}`);
-    return JSON.parse(data) as DbData;
-  } catch (error) {
-    console.error("Error reading database data:", error);
-    return { texts: [] };
-  }
-}
-
-// 데이터베이스 데이터 저장하기
-function saveDbData(data: DbData): boolean {
-  ensureDataDirectoryExists();
-
-  try {
-    fs.writeFileSync(DB_DATA_PATH, JSON.stringify(data, null, 2), "utf8");
-    console.log(`db.json 파일 저장 성공: ${DB_DATA_PATH}`);
-    return true;
-  } catch (error) {
-    console.error("Error saving database data:", error);
-    return false;
-  }
-}
+import { fetchTextsFromSupabase, addTextToSupabase } from "@/utils/supabaseApi";
 
 // GET 요청 처리 - 모든 텍스트 목록 가져오기
 export async function GET(): Promise<Response> {
   try {
     console.log("GET /api/files 요청 처리 중...");
-    const dbData = getDbData();
-    console.log(`텍스트 데이터 ${dbData.texts.length}개 불러옴`);
-    return NextResponse.json({ texts: dbData.texts });
+
+    // Supabase에서 텍스트 데이터 가져오기
+    const texts = await fetchTextsFromSupabase();
+
+    console.log(`텍스트 데이터 ${texts.length}개 불러옴`);
+    return NextResponse.json({ texts });
   } catch (error) {
     console.error("Error in GET /api/files:", error);
     return NextResponse.json(
@@ -82,19 +35,8 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
-    // 기존 데이터 가져오기
-    const dbData = getDbData();
-
-    // ID 생성 (숫자 형식)
-    const maxId = dbData.texts.reduce(
-      (max, item) => (item.id > max ? item.id : max),
-      0
-    );
-    const newId = maxId + 1;
-
     // 새 텍스트 객체 생성
-    const newText: TextItem = {
-      id: newId,
+    const newTextData: Omit<TextItem, "id"> = {
       text: body.content,
       language: body.language || "korean",
       level: body.level || "중급",
@@ -105,15 +47,12 @@ export async function POST(request: NextRequest): Promise<Response> {
       updatedAt: new Date().toISOString(),
     };
 
-    console.log("새 텍스트 생성:", newText);
+    console.log("새 텍스트 생성:", newTextData);
 
-    // 데이터베이스에 추가
-    dbData.texts.push(newText);
+    // Supabase에 저장
+    const newText = await addTextToSupabase(newTextData);
 
-    // 데이터베이스 저장
-    const success = saveDbData(dbData);
-
-    if (success) {
+    if (newText) {
       return NextResponse.json({
         success: true,
         text: newText,

@@ -9,27 +9,13 @@ export type TextStatus =
   | "오디오 생성됨";
 
 // 언어 타입
-export type Language = "spanish" | "korean";
+export type Language = "한국어" | "스페인어";
 
 // 레벨 타입
-export type Level =
-  | "초급"
-  | "중급"
-  | "실전"
-  | "beginner"
-  | "basic"
-  | "intermediate"
-  | "advanced";
+export type Level = "입문" | "기초" | "중급" | "고급";
 
 // 시험 타입
-export type ExamType =
-  | "스널트"
-  | "플렉스"
-  | "오픽"
-  | "snult"
-  | "flex"
-  | "opic"
-  | null;
+export type ExamType = "스널트" | "플렉스" | "오픽";
 
 // 텍스트 데이터 타입 정의
 export interface TextItem {
@@ -48,29 +34,23 @@ export interface TextItem {
 }
 
 // 언어 표시 맵핑
-export const LANGUAGE_MAP: Record<string, string> = {
-  spanish: "스페인어",
-  korean: "한국어",
+export const LANGUAGE_MAP: Record<Language, string> = {
+  한국어: "한국어",
+  스페인어: "스페인어",
 };
 
 // 레벨 표시 맵핑
-export const LEVEL_MAP: Record<string, string> = {
-  beginner: "입문 (A1)",
-  basic: "기초 (A2)",
-  intermediate: "중급 (B1)",
-  advanced: "고급 (B2)",
-  초급: "초급",
+export const LEVEL_MAP: Record<Level, string> = {
+  입문: "입문",
+  기초: "기초",
   중급: "중급",
-  실전: "실전",
+  고급: "고급",
 };
 
 // 시험 유형 맵핑
-export const EXAM_TYPE_MAP: Record<string, string> = {
-  snult: "스널트",
+export const EXAM_TYPE_MAP: Record<ExamType, string> = {
   스널트: "스널트",
-  flex: "플렉스",
   플렉스: "플렉스",
-  opic: "오픽",
   오픽: "오픽",
 };
 

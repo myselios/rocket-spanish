@@ -143,6 +143,28 @@
         "C:\\Users\\user\\OneDrive\\문서\\git\\rocket\\rocket\\data\\output\\2025-04-19_23-58-39\\output_98.mp3",
         "C:\\Users\\user\\OneDrive\\문서\\git\\rocket\\rocket\\data\\output\\2025-04-19_23-58-39\\output_99.mp3"
       ]
+    },
+    {
+      "id": 4,
+      "text": "Me arrepiento de haber comprado ese móvil.",
+      "language": "spanish",
+      "level": "beginner",
+      "examType": "snult",
+      "status": "텍스트만",
+      "audioUrl": null,
+      "createdAt": "2025-04-19T16:05:28.819Z",
+      "updatedAt": "2025-04-19T16:05:28.819Z"
+    },
+    {
+      "id": 5,
+      "text": "test",
+      "language": "spanish",
+      "level": "beginner",
+      "examType": "snult",
+      "status": "텍스트만",
+      "audioUrl": null,
+      "createdAt": "2025-04-19T16:18:35.709Z",
+      "updatedAt": "2025-04-19T16:18:35.709Z"
     }
   ]
 }

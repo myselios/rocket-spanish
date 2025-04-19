@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
 import { processTTS } from "@/utils/tts/ttsService";
-import { TextItem } from "@/types";
+import {
+  fetchTextFromSupabase,
+  updateTextStatusInSupabase,
+} from "@/utils/supabaseApi";
+import { put } from "@vercel/blob";
+import { readFile } from "fs/promises";
+import path from "path";
 
 export async function POST(request: NextRequest): Promise<Response> {
   console.log("========== TTS API 요청 시작 ==========");
@@ -10,10 +15,6 @@ export async function POST(request: NextRequest): Promise<Response> {
     // 프로젝트 루트 경로 설정
     const projectRoot = process.cwd();
     console.log(`프로젝트 루트 경로: ${projectRoot}`);
-
-    // DB 파일 경로 설정
-    const DB_PATH = path.resolve(projectRoot, "db.json");
-    console.log(`DB 파일 경로: ${DB_PATH}`);
 
     // 요청 본문에서 text_id 파싱
     let body;
@@ -41,69 +42,22 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
-    // DB 파일 존재 확인
-    try {
-      const { access } = await import("fs/promises");
-      await access(DB_PATH);
-      console.log(`DB 파일 존재 확인 완료: ${DB_PATH}`);
-    } catch (accessError) {
-      console.error(`DB 파일 접근 오류: ${DB_PATH}`, accessError);
-      return NextResponse.json(
-        { error: "DB 파일을 찾을 수 없습니다" },
-        { status: 500 }
-      );
-    }
-
-    // DB 파일 읽기
-    let dbData;
-    try {
-      const { readFile } = await import("fs/promises");
-      const dbContent = await readFile(DB_PATH, "utf8");
-      console.log(
-        `DB 파일 읽기 성공: ${DB_PATH}, 크기: ${dbContent.length} 바이트`
-      );
-
-      try {
-        dbData = JSON.parse(dbContent);
-        console.log(
-          `DB 파일 파싱 성공: 텍스트 항목 수: ${dbData.texts?.length || 0}`
-        );
-      } catch (parseError) {
-        console.error(`DB 파일 JSON 파싱 오류:`, parseError);
-        return NextResponse.json(
-          { error: "DB 파일이 유효한 JSON 형식이 아닙니다" },
-          { status: 500 }
-        );
-      }
-    } catch (error) {
-      console.error(`DB 파일 읽기 실패: ${DB_PATH}`, error);
-      return NextResponse.json(
-        { error: "DB 파일을 읽는 중 오류가 발생했습니다" },
-        { status: 500 }
-      );
-    }
-
-    // 해당 id를 가진 텍스트 항목 찾기
-    const textItem = dbData.texts.find(
-      (item: { id: number }) => item.id === text_id
-    );
-
-    if (textItem) {
-      console.log(`찾은 텍스트 항목:`);
-      console.log(`- ID: ${textItem.id}`);
-      console.log(`- 언어: ${textItem.language}`);
-      console.log(`- 상태: ${textItem.status}`);
-      console.log(`- 텍스트 길이: ${textItem.text?.length || 0}자`);
-    } else {
-      console.error(`ID ${text_id}를 가진 텍스트를 찾을 수 없음`);
-    }
+    // Supabase에서 텍스트 항목 가져오기
+    const textItem = await fetchTextFromSupabase(text_id);
 
     if (!textItem) {
+      console.error(`ID ${text_id}를 가진 텍스트를 찾을 수 없음`);
       return NextResponse.json(
         { error: `ID ${text_id}를 가진 텍스트를 찾을 수 없습니다` },
         { status: 404 }
       );
     }
+
+    console.log(`찾은 텍스트 항목:`);
+    console.log(`- ID: ${textItem.id}`);
+    console.log(`- 언어: ${textItem.language}`);
+    console.log(`- 상태: ${textItem.status}`);
+    console.log(`- 텍스트 길이: ${textItem.text?.length || 0}자`);
 
     // 텍스트 검증
     if (!textItem.text || textItem.text.trim() === "") {
@@ -118,7 +72,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     // TTS 처리 실행
     let ttsResult;
     try {
-      ttsResult = await processTTS(textItem as TextItem);
+      ttsResult = await processTTS(textItem);
       console.log(`TTS 변환 성공:`, ttsResult);
     } catch (ttsError) {
       console.error(`TTS 변환 처리 오류:`, ttsError);
@@ -140,49 +94,48 @@ export async function POST(request: NextRequest): Promise<Response> {
       // 오류로 처리하지 않고 경고만 남김
     }
 
-    // db.json 파일 업데이트
+    // Vercel Blob Storage에 파일 업로드
     try {
-      // 텍스트 항목 상태 업데이트
-      textItem.status = "TTS 완료";
-      textItem.audioPath = outputDir;
-      textItem.audioUrl = `file://${outputDir}/output_1.mp3`;
-      textItem.updatedAt = new Date().toISOString();
-      textItem.tts_files = mp3Files;
+      const mp3FilePath = path.join(projectRoot, outputDir, "output_1.mp3");
+      console.log(`MP3 파일 경로: ${mp3FilePath}`);
 
-      console.log(`텍스트 항목 상태 업데이트:`, {
-        status: textItem.status,
-        audioPath: textItem.audioPath,
-        updatedAt: textItem.updatedAt,
+      // 파일 내용을 버퍼로 읽기
+      const fileBuffer = await readFile(mp3FilePath);
+
+      // Vercel Blob Storage에 업로드
+      const blob = await put(`tts_${text_id}_${Date.now()}.mp3`, fileBuffer, {
+        access: "public",
       });
 
-      // db.json 파일에 변경사항 저장
-      const { writeFile } = await import("fs/promises");
-      await writeFile(DB_PATH, JSON.stringify(dbData, null, 2), "utf8");
-      console.log(`DB 파일 업데이트 성공: ${DB_PATH}`);
-    } catch (updateError) {
-      console.error(`DB 파일 업데이트 실패: ${DB_PATH}`, updateError);
+      console.log(`Blob Storage에 업로드 완료: ${blob.url}`);
+
+      // Supabase에서 텍스트 상태 업데이트
+      await updateTextStatusInSupabase(text_id, "TTS 완료", blob.url);
+
+      console.log(`텍스트 상태 업데이트 완료: ${text_id}`);
+
+      console.log("========== TTS API 요청 완료 ==========");
+
+      // 응답 반환
+      return NextResponse.json({
+        success: true,
+        text_id,
+        audioUrl: blob.url,
+        mp3Files,
+      });
+    } catch (uploadError) {
+      console.error(`파일 업로드 또는 DB 업데이트 오류:`, uploadError);
       return NextResponse.json(
         {
-          error: "DB 파일 업데이트 중 오류가 발생했습니다",
-          success: true,
-          text_id,
-          outputDir,
-          mp3Files,
+          error: "파일 업로드 또는 DB 업데이트 중 오류가 발생했습니다",
+          details:
+            uploadError instanceof Error
+              ? uploadError.message
+              : String(uploadError),
         },
         { status: 500 }
       );
     }
-
-    console.log("========== TTS API 요청 완료 ==========");
-    console.log("TTS 변환 완료: ", { text_id, outputDir, mp3Files });
-
-    // 응답 반환
-    return NextResponse.json({
-      success: true,
-      text_id,
-      outputDir,
-      mp3Files,
-    });
   } catch (error) {
     console.error("========== TTS API 요청 실패 ==========");
     console.error("TTS 변환 중 오류:", error);
